@@ -7,9 +7,10 @@ This system employs several agents working together:
 1. Valuation Agent - Calculates the intrinsic value of a stock and generates trading signals
 2. Sentiment Agent - Analyzes market sentiment and generates trading signals
 3. Fundamentals Agent - Analyzes fundamental data and generates trading signals
-4. Technical Analyst - Analyzes technical indicators and generates trading signals
-5. Risk Manager - Calculates risk metrics and sets position limits
-6. Portfolio Manager - Makes final trading decisions and generates orders
+4. Technicals Agent - Analyzes technical indicators and generates trading signals
+5. Warren Buffett Agent - Uses Warren Buffett's principles to generate trading signals
+6. Risk Manager - Calculates risk metrics and sets position limits
+7. Portfolio Manager - Makes final trading decisions and generates orders
    
 <img width="1060" alt="Screenshot 2025-01-03 at 5 39 25 PM" src="https://github.com/user-attachments/assets/4611aace-27d0-43b2-9a70-385b40336e3f" />
 
@@ -63,11 +64,18 @@ poetry install
 cp .env.example .env
 ```
 
+4. Run deepseek locally using Ollama
+
+I did this only for learning purpose and not wanting to pay ChatGPT for higher queries. 
+
+Follow the guide here, [ollama setup](https://github.com/ollama/ollama)
+
+Note: I am running deepseek-R1:7B locally on my machine. If your machine can do more, pick higher [params](https://ollama.com/library/deepseek-r1)
+
+5. Setup env file
+
 Set the API keys in the .env file:
 ```
-# Get your OpenAI API key from https://platform.openai.com/
-OPENAI_API_KEY=your-openai-api-key
-
 # Get your Financial Datasets API key from https://financialdatasets.ai/
 FINANCIAL_DATASETS_API_KEY=your-financial-datasets-api-key
 ```
@@ -125,6 +133,7 @@ ai-hedge-fund/
 │   │   ├── sentiment.py          # Sentiment analysis agent
 │   │   ├── technicals.py         # Technical analysis agent
 │   │   ├── valuation.py          # Valuation analysis agent
+│   │   ├── warren_buffett.py     # Warren Buffett agent
 │   ├── tools/                    # Agent tools
 │   │   ├── api.py                # API tools
 │   ├── backtester.py             # Backtesting tools
