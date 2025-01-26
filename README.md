@@ -64,11 +64,18 @@ poetry install
 cp .env.example .env
 ```
 
+4. Run deepseek locally using Ollama
+
+I did this only for learning purpose and not wanting to pay ChatGPT for higher queries. 
+
+Follow the guide here, [ollama setup](https://github.com/ollama/ollama)
+
+Note: I am running deepseek-R1:7B locally on my machine. If your machine can do more, pick higher [params](https://ollama.com/library/deepseek-r1)
+
+5. Setup env file
+
 Set the API keys in the .env file:
 ```
-# Get your OpenAI API key from https://platform.openai.com/
-OPENAI_API_KEY=your-openai-api-key
-
 # Get your Financial Datasets API key from https://financialdatasets.ai/
 FINANCIAL_DATASETS_API_KEY=your-financial-datasets-api-key
 ```
