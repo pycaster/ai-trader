@@ -1,5 +1,4 @@
 from src.graph.state import AgentState, show_agent_reasoning
-from src.tools.api import get_financial_metrics, get_market_cap, search_line_items
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
@@ -7,7 +6,6 @@ import json
 from typing_extensions import Literal
 from src.utils.progress import progress
 from src.utils.llm import call_llm
-from src.utils.api_key import get_api_key_from_state
 
 
 class MohnishPabraiSignal(BaseModel):
@@ -21,7 +19,7 @@ def mohnish_pabrai_agent(state: AgentState, agent_id: str = "mohnish_pabrai_agen
     data = state["data"]
     end_date = data["end_date"]
     tickers = data["tickers"]
-    api_key = get_api_key_from_state(state, "FINANCIAL_DATASETS_API_KEY")
+    data_provider = state["data_provider"]
 
     analysis_data: dict[str, any] = {}
     pabrai_analysis: dict[str, any] = {}
@@ -30,10 +28,10 @@ def mohnish_pabrai_agent(state: AgentState, agent_id: str = "mohnish_pabrai_agen
     # and potential for doubling in 2-3 years at low risk.
     for ticker in tickers:
         progress.update_status(agent_id, ticker, "Fetching financial metrics")
-        metrics = get_financial_metrics(ticker, end_date, period="annual", limit=8, api_key=api_key)
+        metrics = data_provider.get_financial_metrics(ticker, end_date, period="annual", limit=8)
 
         progress.update_status(agent_id, ticker, "Gathering financial line items")
-        line_items = search_line_items(
+        line_items = data_provider.get_financial_line_items(
             ticker,
             [
                 # Profitability and cash generation
@@ -59,11 +57,10 @@ def mohnish_pabrai_agent(state: AgentState, agent_id: str = "mohnish_pabrai_agen
             end_date,
             period="annual",
             limit=8,
-            api_key=api_key,
         )
 
         progress.update_status(agent_id, ticker, "Getting market cap")
-        market_cap = get_market_cap(ticker, end_date, api_key=api_key)
+        market_cap = data_provider.get_market_cap(ticker, end_date)
 
         progress.update_status(agent_id, ticker, "Analyzing downside protection")
         downside = analyze_downside_protection(line_items)

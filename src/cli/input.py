@@ -12,6 +12,8 @@ from src.utils.ollama import ensure_ollama_and_model
 from dataclasses import dataclass
 from typing import Optional
 
+from src.data.factory import DataProviderFactory
+
 
 def add_common_args(
     parser: argparse.ArgumentParser,
@@ -215,6 +217,7 @@ class CLIInputs:
     selected_analysts: list[str]
     model_name: str
     model_provider: str
+    data_provider: DataProviderFactory
     start_date: str
     end_date: str
     initial_cash: float
@@ -260,6 +263,14 @@ def parse_cli_inputs(
     if include_graph_flag:
         parser.add_argument("--show-agent-graph", action="store_true", help="Show the agent graph")
 
+    # New Data Provider argument
+    parser.add_argument(
+        "--data-provider", 
+        choices=["yahoo", "financial_datasets"],
+        default="yahoo",
+        help="The data provider to use (overrides DATA_PROVIDER env var)"
+    )
+
     args = parser.parse_args()
 
     # Normalize parsed values
@@ -271,11 +282,15 @@ def parse_cli_inputs(
     model_name, model_provider = select_model(getattr(args, "ollama", False), getattr(args, "model", None))
     start_date, end_date = resolve_dates(getattr(args, "start_date", None), getattr(args, "end_date", None), default_months_back=default_months_back)
 
+    data_provider = DataProviderFactory.get_provider(args.data_provider)
+       
+
     return CLIInputs(
         tickers=tickers,
         selected_analysts=selected_analysts,
         model_name=model_name,
         model_provider=model_provider,
+        data_provider=data_provider,
         start_date=start_date,
         end_date=end_date,
         initial_cash=getattr(args, "initial_cash", 100000.0),

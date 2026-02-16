@@ -1,5 +1,4 @@
 from src.graph.state import AgentState, show_agent_reasoning
-from src.tools.api import get_financial_metrics, get_market_cap, search_line_items
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
@@ -7,7 +6,6 @@ import json
 from typing_extensions import Literal
 from src.utils.progress import progress
 from src.utils.llm import call_llm
-from src.utils.api_key import get_api_key_from_state
 
 
 class BillAckmanSignal(BaseModel):
@@ -25,17 +23,17 @@ def bill_ackman_agent(state: AgentState, agent_id: str = "bill_ackman_agent"):
     data = state["data"]
     end_date = data["end_date"]
     tickers = data["tickers"]
-    api_key = get_api_key_from_state(state, "FINANCIAL_DATASETS_API_KEY")
+    data_provider = state["data_provider"]
     analysis_data = {}
     ackman_analysis = {}
-    
+
     for ticker in tickers:
         progress.update_status(agent_id, ticker, "Fetching financial metrics")
-        metrics = get_financial_metrics(ticker, end_date, period="annual", limit=5, api_key=api_key)
-        
+        metrics = data_provider.get_financial_metrics(ticker, end_date, period="annual", limit=5)
+
         progress.update_status(agent_id, ticker, "Gathering financial line items")
         # Request multiple periods of data (annual or TTM) for a more robust long-term view.
-        financial_line_items = search_line_items(
+        financial_line_items = data_provider.get_financial_line_items(
             ticker,
             [
                 "revenue",
@@ -52,11 +50,10 @@ def bill_ackman_agent(state: AgentState, agent_id: str = "bill_ackman_agent"):
             end_date,
             period="annual",
             limit=5,
-            api_key=api_key,
         )
-        
+
         progress.update_status(agent_id, ticker, "Getting market cap")
-        market_cap = get_market_cap(ticker, end_date, api_key=api_key)
+        market_cap = data_provider.get_market_cap(ticker, end_date)
         
         progress.update_status(agent_id, ticker, "Analyzing business quality")
         quality_analysis = analyze_business_quality(metrics, financial_line_items)

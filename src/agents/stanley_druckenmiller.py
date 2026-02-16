@@ -1,12 +1,5 @@
 from src.graph.state import AgentState, show_agent_reasoning
-from src.tools.api import (
-    get_financial_metrics,
-    get_market_cap,
-    search_line_items,
-    get_insider_trades,
-    get_company_news,
-    get_prices,
-)
+from src.tools.api import get_insider_trades
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
@@ -41,17 +34,15 @@ def stanley_druckenmiller_agent(state: AgentState, agent_id: str = "stanley_druc
     analysis_data = {}
     druck_analysis = {}
 
+    # Use data_provider directly from state (already set by graph)
+    data_provider = state["data_provider"]
+
     for ticker in tickers:
         progress.update_status(agent_id, ticker, "Fetching financial metrics")
-        metrics = get_financial_metrics(ticker, end_date, period="annual", limit=5, api_key=api_key)
+        metrics = data_provider.get_financial_metrics(ticker, end_date, period="annual", limit=5)
 
         progress.update_status(agent_id, ticker, "Gathering financial line items")
-        # Include relevant line items for Stan Druckenmiller's approach:
-        #   - Growth & momentum: revenue, EPS, operating_income, ...
-        #   - Valuation: net_income, free_cash_flow, ebit, ebitda
-        #   - Leverage: total_debt, shareholders_equity
-        #   - Liquidity: cash_and_equivalents
-        financial_line_items = search_line_items(
+        financial_line_items = data_provider.get_financial_line_items(
             ticker,
             [
                 "revenue",
@@ -72,20 +63,20 @@ def stanley_druckenmiller_agent(state: AgentState, agent_id: str = "stanley_druc
             end_date,
             period="annual",
             limit=5,
-            api_key=api_key,
         )
 
         progress.update_status(agent_id, ticker, "Getting market cap")
-        market_cap = get_market_cap(ticker, end_date, api_key=api_key)
+        market_cap = data_provider.get_market_cap(ticker, end_date)
 
         progress.update_status(agent_id, ticker, "Fetching insider trades")
         insider_trades = get_insider_trades(ticker, end_date, limit=50, api_key=api_key)
 
         progress.update_status(agent_id, ticker, "Fetching company news")
-        company_news = get_company_news(ticker, end_date, limit=50, api_key=api_key)
+        company_news = data_provider.get_company_news(ticker, start_date, end_date, limit=50)
 
+        # Use data_provider from state to fetch price data
         progress.update_status(agent_id, ticker, "Fetching recent price data for momentum")
-        prices = get_prices(ticker, start_date=start_date, end_date=end_date, api_key=api_key)
+        prices = data_provider.get_prices(ticker=ticker, start_date=start_date, end_date=end_date)
 
         progress.update_status(agent_id, ticker, "Analyzing growth & momentum")
         growth_momentum_analysis = analyze_growth_and_momentum(financial_line_items, prices)

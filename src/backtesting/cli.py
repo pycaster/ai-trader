@@ -14,7 +14,6 @@ from src.utils.analysts import ANALYST_ORDER
 from src.main import run_hedge_fund
 from src.utils.ollama import ensure_ollama_and_model
 
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run backtesting engine (modular)")
     parser.add_argument("--tickers", type=str, required=False, help="Comma-separated tickers")

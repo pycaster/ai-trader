@@ -21,6 +21,8 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import json
 
+from src.data.factory import DataProviderFactory
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -48,6 +50,7 @@ def run_hedge_fund(
     start_date: str,
     end_date: str,
     portfolio: dict,
+    data_provider: DataProviderFactory,
     show_reasoning: bool = False,
     selected_analysts: list[str] = [],
     model_name: str = "gpt-4.1",
@@ -80,6 +83,7 @@ def run_hedge_fund(
                     "model_name": model_name,
                     "model_provider": model_provider,
                 },
+                "data_provider": data_provider,
             },
         )
 
@@ -171,6 +175,7 @@ if __name__ == "__main__":
         start_date=inputs.start_date,
         end_date=inputs.end_date,
         portfolio=portfolio,
+        data_provider=inputs.data_provider,
         show_reasoning=inputs.show_reasoning,
         selected_analysts=inputs.selected_analysts,
         model_name=inputs.model_name,

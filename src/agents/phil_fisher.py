@@ -1,10 +1,5 @@
 from src.graph.state import AgentState, show_agent_reasoning
-from src.tools.api import (
-    get_market_cap,
-    search_line_items,
-    get_insider_trades,
-    get_company_news,
-)
+from src.tools.api import get_insider_trades
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
@@ -34,9 +29,11 @@ def phil_fisher_agent(state: AgentState, agent_id: str = "phil_fisher_agent"):
     Returns a bullish/bearish/neutral signal with confidence and reasoning.
     """
     data = state["data"]
+    start_date = data["start_date"]
     end_date = data["end_date"]
     tickers = data["tickers"]
     api_key = get_api_key_from_state(state, "FINANCIAL_DATASETS_API_KEY")
+    data_provider = state["data_provider"]
     analysis_data = {}
     fisher_analysis = {}
 
@@ -47,7 +44,7 @@ def phil_fisher_agent(state: AgentState, agent_id: str = "phil_fisher_agent"):
         #   - Margins & Stability: operating_income, operating_margin, gross_margin
         #   - Management Efficiency & Leverage: total_debt, shareholders_equity, free_cash_flow
         #   - Valuation: net_income, free_cash_flow (for P/E, P/FCF), ebit, ebitda
-        financial_line_items = search_line_items(
+        financial_line_items = data_provider.get_financial_line_items(
             ticker,
             [
                 "revenue",
@@ -67,17 +64,16 @@ def phil_fisher_agent(state: AgentState, agent_id: str = "phil_fisher_agent"):
             end_date,
             period="annual",
             limit=5,
-            api_key=api_key,
         )
 
         progress.update_status(agent_id, ticker, "Getting market cap")
-        market_cap = get_market_cap(ticker, end_date, api_key=api_key)
+        market_cap = data_provider.get_market_cap(ticker, end_date)
 
         progress.update_status(agent_id, ticker, "Fetching insider trades")
         insider_trades = get_insider_trades(ticker, end_date, limit=50, api_key=api_key)
 
         progress.update_status(agent_id, ticker, "Fetching company news")
-        company_news = get_company_news(ticker, end_date, limit=50, api_key=api_key)
+        company_news = data_provider.get_company_news(ticker, start_date, end_date, limit=50)
 
         progress.update_status(agent_id, ticker, "Analyzing growth & quality")
         growth_quality = analyze_fisher_growth_quality(financial_line_items)

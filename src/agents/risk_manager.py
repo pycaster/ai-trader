@@ -1,11 +1,10 @@
 from langchain_core.messages import HumanMessage
 from src.graph.state import AgentState, show_agent_reasoning
 from src.utils.progress import progress
-from src.tools.api import get_prices, prices_to_df
+from src.tools.api import prices_to_df
 import json
 import numpy as np
 import pandas as pd
-from src.utils.api_key import get_api_key_from_state
 
 ##### Risk Management Agent #####
 def risk_management_agent(state: AgentState, agent_id: str = "risk_management_agent"):
@@ -13,7 +12,7 @@ def risk_management_agent(state: AgentState, agent_id: str = "risk_management_ag
     portfolio = state["data"]["portfolio"]
     data = state["data"]
     tickers = data["tickers"]
-    api_key = get_api_key_from_state(state, "FINANCIAL_DATASETS_API_KEY")
+    data_provider = state["data_provider"]
     
     # Initialize risk analysis for each ticker
     risk_analysis = {}
@@ -27,11 +26,11 @@ def risk_management_agent(state: AgentState, agent_id: str = "risk_management_ag
     for ticker in all_tickers:
         progress.update_status(agent_id, ticker, "Fetching price data and calculating volatility")
         
-        prices = get_prices(
+        prices = data_provider.get_prices(
             ticker=ticker,
             start_date=data["start_date"],
             end_date=data["end_date"],
-            api_key=api_key,
+            # api_key=api_key,
         )
 
         if not prices:
@@ -65,6 +64,7 @@ def risk_management_agent(state: AgentState, agent_id: str = "risk_management_ag
                 f"Price: {current_price:.2f}, Ann. Vol: {volatility_metrics['annualized_volatility']:.1%}"
             )
         else:
+            print(f"Warning: No valid price data for {ticker}")
             progress.update_status(agent_id, ticker, "Warning: Insufficient price data")
             current_prices[ticker] = 0
             volatility_data[ticker] = {

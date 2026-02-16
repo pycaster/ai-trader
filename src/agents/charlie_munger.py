@@ -1,5 +1,5 @@
 from src.graph.state import AgentState, show_agent_reasoning
-from src.tools.api import get_financial_metrics, get_market_cap, search_line_items, get_insider_trades, get_company_news
+from src.tools.api import get_insider_trades
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
@@ -21,18 +21,20 @@ def charlie_munger_agent(state: AgentState, agent_id: str = "charlie_munger_agen
     Focuses on moat strength, management quality, predictability, and valuation.
     """
     data = state["data"]
+    start_date = data["start_date"]
     end_date = data["end_date"]
     tickers = data["tickers"]
     api_key = get_api_key_from_state(state, "FINANCIAL_DATASETS_API_KEY")
+    data_provider = state["data_provider"]
     analysis_data = {}
     munger_analysis = {}
-    
+
     for ticker in tickers:
         progress.update_status(agent_id, ticker, "Fetching financial metrics")
-        metrics = get_financial_metrics(ticker, end_date, period="annual", limit=10, api_key=api_key)  # Munger looks at longer periods
-        
+        metrics = data_provider.get_financial_metrics(ticker, end_date, period="annual", limit=10)  # Munger looks at longer periods
+
         progress.update_status(agent_id, ticker, "Gathering financial line items")
-        financial_line_items = search_line_items(
+        financial_line_items = data_provider.get_financial_line_items(
             ticker,
             [
                 "revenue",
@@ -53,12 +55,11 @@ def charlie_munger_agent(state: AgentState, agent_id: str = "charlie_munger_agen
             end_date,
             period="annual",
             limit=10,  # Munger examines long-term trends
-            api_key=api_key,
         )
-        
+
         progress.update_status(agent_id, ticker, "Getting market cap")
-        market_cap = get_market_cap(ticker, end_date, api_key=api_key)
-        
+        market_cap = data_provider.get_market_cap(ticker, end_date)
+
         progress.update_status(agent_id, ticker, "Fetching insider trades")
         # Munger values management with skin in the game
         insider_trades = get_insider_trades(
@@ -67,15 +68,10 @@ def charlie_munger_agent(state: AgentState, agent_id: str = "charlie_munger_agen
             limit=100,
             api_key=api_key,
         )
-        
+
         progress.update_status(agent_id, ticker, "Fetching company news")
         # Munger avoids businesses with frequent negative press
-        company_news = get_company_news(
-            ticker,
-            end_date,
-            limit=10,
-            api_key=api_key,
-        )
+        company_news = data_provider.get_company_news(ticker, start_date, end_date, limit=10)
         
         progress.update_status(agent_id, ticker, "Analyzing moat strength")
         moat_analysis = analyze_moat_strength(metrics, financial_line_items)

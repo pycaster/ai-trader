@@ -9,13 +9,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
-from src.tools.api import (
-    get_company_news,
-    get_financial_metrics,
-    get_insider_trades,
-    get_market_cap,
-    search_line_items,
-)
+from src.tools.api import get_insider_trades
 from src.utils.llm import call_llm
 from src.utils.progress import progress
 from src.utils.api_key import get_api_key_from_state
@@ -33,11 +27,10 @@ def michael_burry_agent(state: AgentState, agent_id: str = "michael_burry_agent"
     """Analyse stocks using Michael Burry's deep‑value, contrarian framework."""
     api_key = get_api_key_from_state(state, "FINANCIAL_DATASETS_API_KEY")
     data = state["data"]
+    start_date: str = data["start_date"]
     end_date: str = data["end_date"]  # YYYY‑MM‑DD
     tickers: list[str] = data["tickers"]
-
-    # We look one year back for insider trades / news flow
-    start_date = (datetime.fromisoformat(end_date) - timedelta(days=365)).date().isoformat()
+    data_provider = state["data_provider"]
 
     analysis_data: dict[str, dict] = {}
     burry_analysis: dict[str, dict] = {}
@@ -47,10 +40,10 @@ def michael_burry_agent(state: AgentState, agent_id: str = "michael_burry_agent"
         # Fetch raw data
         # ------------------------------------------------------------------
         progress.update_status(agent_id, ticker, "Fetching financial metrics")
-        metrics = get_financial_metrics(ticker, end_date, period="ttm", limit=5, api_key=api_key)
+        metrics = data_provider.get_financial_metrics(ticker, end_date, period="ttm", limit=5)
 
         progress.update_status(agent_id, ticker, "Fetching line items")
-        line_items = search_line_items(
+        line_items = data_provider.get_financial_line_items(
             ticker,
             [
                 "free_cash_flow",
@@ -63,17 +56,16 @@ def michael_burry_agent(state: AgentState, agent_id: str = "michael_burry_agent"
                 "issuance_or_purchase_of_equity_shares",
             ],
             end_date,
-            api_key=api_key,
         )
 
         progress.update_status(agent_id, ticker, "Fetching insider trades")
-        insider_trades = get_insider_trades(ticker, end_date=end_date, start_date=start_date)
+        insider_trades = get_insider_trades(ticker, end_date=end_date, start_date=start_date, api_key=api_key)
 
         progress.update_status(agent_id, ticker, "Fetching company news")
-        news = get_company_news(ticker, end_date=end_date, start_date=start_date, limit=250)
+        news = data_provider.get_company_news(ticker, start_date, end_date, limit=250)
 
         progress.update_status(agent_id, ticker, "Fetching market cap")
-        market_cap = get_market_cap(ticker, end_date, api_key=api_key)
+        market_cap = data_provider.get_market_cap(ticker, end_date)
 
         # ------------------------------------------------------------------
         # Run sub‑analyses
